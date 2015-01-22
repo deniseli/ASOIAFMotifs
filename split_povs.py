@@ -47,7 +47,8 @@ for i in range(len(fcontents)):
         else:
             # This line is part of a chapter. Clean the text and append it to
             # currContents.
-            clean = line.rstrip(' ').replace('"', '').replace("  ", " ").lower()
+            clean = line.rstrip(' ').lower()
+            clean = clean.replace('"', '').replace("  ", " ").replace(" '", "'")
             if len(clean) > 0:
                 if len(currContents) > 0:
                     currContents += " "
