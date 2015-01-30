@@ -4,34 +4,26 @@
 
 import os
 import pickle
-import string
-from collections import Counter
-from nltk import word_tokenize
-from nltk.collocations import BigramCollocationFinder
-
-def save_obj(obj, loc):
-    with open(loc + '.pkl', 'wb') as f:
-        pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
 
 def load_obj(loc):
     with open(loc + '.pkl', 'rb') as f:
         return pickle.load(f)
-
-def remove_comma(word):
-    if len(word) == 0:
-        return word
-    if word[-1] == ',':
-        return word[:-1]
-    return word
 
 # Gets names of directories for each book
 dirs = []
 for filename in os.listdir("books"):
     dirs.append(filename[:-4] + "/")
 
-
 for dir in dirs:
-    all_counts = {}
+    # Load bigram counts for All POVs and count totals for each first word
+    counts = load_obj('bigrams/' + dir + 'All')
+    all = {}
+    for word in counts.keys():
+        total = 0
+        for x in counts[word].keys():
+            total += counts[word][x]
+        for x in counts[word].keys():
+            all[(word, x)] = 1.0 * counts[word][x] / total
     # Get all the file names containing POV titles in this directory
     fnames = []
     for filename in os.listdir("povs/" + dir):
@@ -39,34 +31,48 @@ for dir in dirs:
     # Remove the first file, .DS_STORE, from the list
     fnames = fnames[1:]
     for fname in fnames:
-        print dir
-        print fname
-        # Do count for this file
+        # Load POV chapters
         with open("povs/" + dir + fname) as f:
-            text = f.readlines()[0]
-        words = text.split(" ")
-        counts = {}
-        for i in range(len(words) - 1):
-            a = remove_comma(words[i])
-            b = remove_comma(words[i + 1])
-            if len(a) == 0 or len(b) == 0:
-                continue
-            # Skip ends of sentences
-            if a[-1] in string.punctuation:
-                continue
-            # Increment counter
-            if a not in counts.keys():
-                counts[a] = {}
-            if b not in counts[a].keys():
-                counts[a][b] = 0
-            if a not in all_counts.keys():
-                all_counts[a] = {}
-            if b not in all_counts[a].keys():
-                all_counts[a][b] = 0
-            counts[a][b] += 1
-            all_counts[a][b] += 1
-        # Save bigram counts
-        save_obj(counts, dir + fname)
-    print dir
-    print "All"
-    save_obj(all_counts, dir + "All")
+          pov_text = f.readlines()[0]
+        # Load bigram counts for each POV and calculate totals
+        pov_ratios = []
+        counts = load_obj('bigrams/' + dir + fname[:-4])
+        for word in counts.keys():
+            total = 0
+            for x in counts[word].keys():
+                total += counts[word][x]
+            for x in counts[word].keys():
+                if total >= 10 and counts[word][x] >= 3:
+                    freq = 1.0 * counts[word][x] / total
+                    pov_ratios.append((word, x, freq / all[(word, x)]))
+        pov_ratios = sorted(pov_ratios, key=lambda x: x[2], reverse=True)
+        # Find the motifs!
+        motifs = []
+        for start in pov_ratios:
+            if start[2] < 1.5: break
+            maybe_motifs = [[start[0], start[1]]]
+            while len(maybe_motifs) > 0:
+                curr = maybe_motifs.pop(0)
+                matching = [x for x in pov_ratios if x[0] == curr[-1] and x[2] > 1.5]
+                if len(matching) > 2:
+                    matching = matching[:2]
+                matched = False
+                for match in matching:
+                    if pov_text.find(' '.join(curr + [match[1]])) != -1:
+                        matched = True
+                        maybe_motifs.append(curr + [match[1]])
+                if not matched and len(curr) >= 4:
+                    motifs.append(' '.join(curr))
+        # Remove contained motifs
+        clean_motifs = []
+        for i in range(len(motifs)):
+            contained = False
+            for j in range(len(motifs)):
+                if motifs[j].find(motifs[i]) != -1 and i != j:
+                    contained = True
+                    break
+            if not contained:
+                clean_motifs.append(motifs[i])
+        print dir[:-1]
+        print fname[:-4]
+        print clean_motifs

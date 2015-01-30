@@ -11,17 +11,13 @@ def save_obj(obj, loc):
     with open('singleCounts/'+ loc + '.pkl', 'wb') as f:
         pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
 
-def load_obj(loc):
-    with open('singleCounts/' + loc + '.pkl', 'rb') as f:
-        return pickle.load(f)
-
 # Gets names of directories for each book
 dirs = []
 for filename in os.listdir("books"):
     dirs.append(filename[:-4] + "/")
 
 all_counts = {}
-for dir in dirs[1:2]:
+for dir in dirs:
     total = Counter({})
     # Get all the file names containing POV titles in this directory
     fnames = []
