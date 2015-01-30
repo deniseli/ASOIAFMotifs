@@ -5,17 +5,10 @@
 import os
 import pickle
 import string
-from collections import Counter
-from nltk import word_tokenize
-from nltk.collocations import BigramCollocationFinder
 
 def save_obj(obj, loc):
     with open('bigrams/'+ loc + '.pkl', 'wb') as f:
         pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
-
-def load_obj(loc):
-    with open('bigrams/' + loc + '.pkl', 'rb') as f:
-        return pickle.load(f)
 
 def remove_comma(word):
     if len(word) == 0:
@@ -28,7 +21,6 @@ def remove_comma(word):
 dirs = []
 for filename in os.listdir("books"):
     dirs.append(filename[:-4] + "/")
-
 
 for dir in dirs:
     all_counts = {}
@@ -54,6 +46,8 @@ for dir in dirs:
             # Skip ends of sentences
             if a[-1] in string.punctuation:
                 continue
+            if b[-1] in string.punctuation:
+                b = b[:-1]
             # Increment counter
             if a not in counts.keys():
                 counts[a] = {}
@@ -66,7 +60,7 @@ for dir in dirs:
             counts[a][b] += 1
             all_counts[a][b] += 1
         # Save bigram counts
-        save_obj(counts, dir + fname)
+        save_obj(counts, dir + fname[:-4])
     print dir
     print "All"
     save_obj(all_counts, dir + "All")
